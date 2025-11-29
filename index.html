@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attendance QR Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h2 {
+      color: #333;
+      text-align: center;
+    }
+    .input-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    #reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto 20px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+    }
+    #status {
+      padding: 15px;
+      background: white;
+      border-radius: 4px;
+      border-left: 4px solid #2196F3;
+      min-height: 20px;
+      color: #333;
+    }
+    #status.success {
+      border-left-color: #4CAF50;
+      background: #e8f5e9;
+    }
+    #status.error {
+      border-left-color: #f44336;
+      background: #ffebee;
+    }
+  </style>
+</head>
+<body>
+  <h2>📱 Attendance QR Scanner</h2>
+  
+  <div class="input-group">
+    <label for="eventSheet">Event Sheet Name:</label>
+    <input type="text" id="eventSheet" placeholder="Enter Event Name (e.g., Workshop 2024)">
+  </div>
+  
+  <div id="reader"></div>
+  <p id="status">Enter event name and scan QR code to begin</p>
+
+  <script>
+    const sheetId = "1KmSg4yP-D915e7J6QEhiJHWtCOZMcsSYzMhNQ-GeSpU";
+    let eventSheet = "";
+    let isProcessing = false;
+
+    document.getElementById("eventSheet").addEventListener("input", function() {
+      eventSheet = this.value.trim();
+      if (eventSheet) {
+        updateStatus("Event sheet set: " + eventSheet, "success");
+      }
+    });
+
+    function updateStatus(message, type = "info") {
+      const statusEl = document.getElementById("status");
+      statusEl.innerText = message;
+      statusEl.className = type;
+    }
+
+    function updateSheet(name) {
+      if (!eventSheet) {
+        alert("Please enter Event Sheet Name first!");
+        return;
+      }
+
+      if (isProcessing) {
+        return;
+      }
+
+      isProcessing = true;
+      updateStatus("Processing: " + name, "info");
+
+      const url = `https://script.google.com/macros/s/AKfycbz6Ih_EVl8StcTd0yT8AaXIvdtpyVlcvCdvJ87RxwXteWUpFEdmUAYtRQM8EedhT-WCFQ/exec?event=${encodeURIComponent(eventSheet)}&name=${encodeURIComponent(name)}`;
+
+      fetch(url)
+        .then(res => res.text())
+        .then(data => {
+          updateStatus(data, "success");
+          isProcessing = false;
+        })
+        .catch(err => {
+          console.error(err);
+          updateStatus("Error updating sheet. Check console.", "error");
+          isProcessing = false;
+        });
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      updateSheet(decodedText);
+    }
+
+    // Initialize scanner
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", 
+      { 
+        fps: 10, 
+        qrbox: 250,
+        rememberLastUsedCamera: true
+      }
+    );
+    
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
+    
+    function onScanError(errorMessage) {
+      // Handle scan errors silently (continuous scanning produces many errors)
+    }
+    
+    // Check for camera permissions
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      updateStatus("Camera access available. Click 'Start Scanning' button.", "info");
+    } else {
+      updateStatus("⚠️ Camera not available. Use HTTPS or open file locally.", "error");
+    }
+  </script>
+</body>
+</html>
