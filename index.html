@@ -76,8 +76,12 @@
   <p id="status">Enter event name and scan QR code to begin</p>
 
   <script>
+    // Your Google Apps Script Web App URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw8grCQjBgGYu82SzehfWZGsbI4NEyqu8Y0qfGbubAXdy_KDOSIfmFEfvpoxKOxRSmdYA/exec";
+    
     let eventSheet = "";
     let isProcessing = false;
+    let html5QrcodeScanner;
 
     document.getElementById("eventSheet").addEventListener("input", function() {
       eventSheet = this.value.trim();
@@ -107,39 +111,37 @@
       isProcessing = true;
       updateStatus("Processing: " + name, "info");
 
-      const url = `https://script.google.com/macros/s/AKfycbw8grCQjBgGYu82SzehfWZGsbI4NEyqu8Y0qfGbubAXdy_KDOSIfmFEfvpoxKOxRSmdYA/exec?event=${encodeURIComponent(eventSheet)}&name=${encodeURIComponent(name)}`;
+      const url = `${SCRIPT_URL}?event=${encodeURIComponent(eventSheet)}&name=${encodeURIComponent(name)}`;
 
-      console.log("Fetching URL:", url);
+      console.log("Sending request to:", url);
 
-      fetch(url, {
-        redirect: 'follow'
-      })
-        .then(res => {
-          console.log("Response status:", res.status);
-          return res.text();
+      fetch(url)
+        .then(response => {
+          console.log("Response received:", response.status);
+          return response.text();
         })
         .then(data => {
-          console.log("Response data:", data);
-          if (data.includes("not found") || data.includes("Error")) {
+          console.log("Data received:", data);
+          if (data.includes("not found") || data.includes("Error") || data.includes("Missing")) {
             updateStatus("❌ " + data, "error");
           } else {
             updateStatus("✓ " + data, "success");
           }
           isProcessing = false;
         })
-        .catch(err => {
-          console.error("Fetch error:", err);
-          updateStatus("❌ Error: " + err.message, "error");
+        .catch(error => {
+          console.error("Fetch error:", error);
+          updateStatus("❌ Connection error: " + error.message, "error");
           isProcessing = false;
         });
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
+    function onScanSuccess(decodedText) {
       updateSheet(decodedText);
     }
 
     function onScanError(errorMessage) {
-      // Handle scan errors silently (continuous scanning produces many errors)
+      // Ignore scan errors (they happen constantly while scanning)
     }
 
     function restartScanner() {
@@ -159,8 +161,8 @@
       updateStatus("Scanner ready. Scan QR code to mark attendance.", "success");
     }
 
-    // Initialize scanner
-    let html5QrcodeScanner = new Html5QrcodeScanner(
+    // Initialize scanner when page loads
+    html5QrcodeScanner = new Html5QrcodeScanner(
       "reader", 
       { 
         fps: 10, 
@@ -170,13 +172,7 @@
     );
     
     html5QrcodeScanner.render(onScanSuccess, onScanError);
-    
-    // Check for camera permissions
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      updateStatus("Camera access available. Click 'Start Scanning' button.", "info");
-    } else {
-      updateStatus("⚠️ Camera not available. Use HTTPS or open file locally.", "error");
-    }
+    updateStatus("Camera access available. Enter event name and start scanning.", "info");
   </script>
 </body>
 </html>
