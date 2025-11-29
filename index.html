@@ -76,7 +76,6 @@
   <p id="status">Enter event name and scan QR code to begin</p>
 
   <script>
-    const sheetId = "1KmSg4yP-D915e7J6QEhiJHWtCOZMcsSYzMhNQ-GeSpU";
     let eventSheet = "";
     let isProcessing = false;
 
@@ -96,7 +95,6 @@
     function updateSheet(name) {
       if (!eventSheet) {
         updateStatus("⚠️ Please enter Event Sheet Name first!", "error");
-        // Pause scanner to allow user to enter event name
         html5QrcodeScanner.clear();
         document.getElementById("reader").innerHTML = '<button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
         return;
@@ -109,17 +107,29 @@
       isProcessing = true;
       updateStatus("Processing: " + name, "info");
 
-      const url = `https://script.google.com/macros/s/AKfycbz6Ih_EVl8StcTd0yT8AaXIvdtpyVlcvCdvJ87RxwXteWUpFEdmUAYtRQM8EedhT-WCFQ/exec?event=${encodeURIComponent(eventSheet)}&name=${encodeURIComponent(name)}`;
+      const url = `https://script.google.com/macros/s/AKfycbw8grCQjBgGYu82SzehfWZGsbI4NEyqu8Y0qfGbubAXdy_KDOSIfmFEfvpoxKOxRSmdYA/exec?event=${encodeURIComponent(eventSheet)}&name=${encodeURIComponent(name)}`;
 
-      fetch(url)
-        .then(res => res.text())
+      console.log("Fetching URL:", url);
+
+      fetch(url, {
+        redirect: 'follow'
+      })
+        .then(res => {
+          console.log("Response status:", res.status);
+          return res.text();
+        })
         .then(data => {
-          updateStatus(data, "success");
+          console.log("Response data:", data);
+          if (data.includes("not found") || data.includes("Error")) {
+            updateStatus("❌ " + data, "error");
+          } else {
+            updateStatus("✓ " + data, "success");
+          }
           isProcessing = false;
         })
         .catch(err => {
-          console.error(err);
-          updateStatus("Error updating sheet. Check console.", "error");
+          console.error("Fetch error:", err);
+          updateStatus("❌ Error: " + err.message, "error");
           isProcessing = false;
         });
     }
@@ -128,22 +138,10 @@
       updateSheet(decodedText);
     }
 
-    // Initialize scanner
-    let html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader", 
-      { 
-        fps: 10, 
-        qrbox: 250,
-        rememberLastUsedCamera: true
-      }
-    );
-    
-    html5QrcodeScanner.render(onScanSuccess, onScanError);
-    
     function onScanError(errorMessage) {
       // Handle scan errors silently (continuous scanning produces many errors)
     }
-    
+
     function restartScanner() {
       if (!eventSheet) {
         updateStatus("⚠️ Please enter Event Sheet Name before scanning!", "error");
@@ -160,6 +158,18 @@
       html5QrcodeScanner.render(onScanSuccess, onScanError);
       updateStatus("Scanner ready. Scan QR code to mark attendance.", "success");
     }
+
+    // Initialize scanner
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", 
+      { 
+        fps: 10, 
+        qrbox: 250,
+        rememberLastUsedCamera: true
+      }
+    );
+    
+    html5QrcodeScanner.render(onScanSuccess, onScanError);
     
     // Check for camera permissions
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
