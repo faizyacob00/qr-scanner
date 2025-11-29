@@ -95,7 +95,10 @@
 
     function updateSheet(name) {
       if (!eventSheet) {
-        alert("Please enter Event Sheet Name first!");
+        updateStatus("⚠️ Please enter Event Sheet Name first!", "error");
+        // Pause scanner to allow user to enter event name
+        html5QrcodeScanner.clear();
+        document.getElementById("reader").innerHTML = '<button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
         return;
       }
 
@@ -139,6 +142,23 @@
     
     function onScanError(errorMessage) {
       // Handle scan errors silently (continuous scanning produces many errors)
+    }
+    
+    function restartScanner() {
+      if (!eventSheet) {
+        updateStatus("⚠️ Please enter Event Sheet Name before scanning!", "error");
+        return;
+      }
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", 
+        { 
+          fps: 10, 
+          qrbox: 250,
+          rememberLastUsedCamera: true
+        }
+      );
+      html5QrcodeScanner.render(onScanSuccess, onScanError);
+      updateStatus("Scanner ready. Scan QR code to mark attendance.", "success");
     }
     
     // Check for camera permissions
