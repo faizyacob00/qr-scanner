@@ -43,8 +43,11 @@
       margin: 0 auto 20px;
       border: 2px solid #ddd;
       border-radius: 8px;
-      overflow: hidden;
+      overflow: visible;
       background: white;
+      position: relative;
+    }
+    #reader-container {
       position: relative;
     }
     #status {
@@ -160,8 +163,9 @@
 
   <p id="status">Enter event name and scan QR code to begin</p>
 
-  <div id="reader">
+  <div id="reader-container">
     <div id="scanOverlay" class="scan-overlay"></div>
+    <div id="reader"></div>
   </div>
 
   <div class="manual-checkin">
@@ -252,6 +256,10 @@
     // Vibration and sound feedback
     function showOverlay(type, message) {
       const overlay = document.getElementById("scanOverlay");
+      if (!overlay) {
+        console.error("Overlay element not found");
+        return;
+      }
       overlay.className = `scan-overlay ${type}`;
       overlay.textContent = message;
       
@@ -371,7 +379,7 @@
         updateStatus("⚠️ Please enter Event Sheet Name first!", "error");
         errorFeedback();
         html5QrcodeScanner.clear();
-        document.getElementById("reader").innerHTML = '<div id="scanOverlay" class="scan-overlay"></div><button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
+        document.getElementById("reader").innerHTML = '<button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
         return;
       }
 
@@ -410,7 +418,7 @@
         return;
       }
       const readerDiv = document.getElementById("reader");
-      readerDiv.innerHTML = '<div id="scanOverlay" class="scan-overlay"></div>';
+      readerDiv.innerHTML = '';
       
       html5QrcodeScanner = new Html5QrcodeScanner(
         "reader", 
