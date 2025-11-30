@@ -62,6 +62,52 @@
       border-left-color: #f44336;
       background: #ffebee;
     }
+    .autocomplete {
+      position: relative;
+    }
+    .autocomplete-items {
+      position: absolute;
+      border: 1px solid #ddd;
+      border-top: none;
+      z-index: 99;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .autocomplete-items div {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .autocomplete-items div:hover {
+      background-color: #e8f5e9;
+    }
+    .manual-checkin {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 2px solid #ddd;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .btn-primary { background: #2196F3; }
+    .btn-success { background: #4CAF50; }
+    .btn-primary:active { background: #1976D2; }
+    .btn-success:active { background: #388E3C; }
   </style>
 </head>
 <body>
@@ -72,9 +118,21 @@
     <input type="text" id="eventSheet" placeholder="Enter Event Name (e.g., Workshop 2024)">
   </div>
 
-  <button onclick="createEventSheet()" style="width:100%;padding:12px;background:#2196F3;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;margin-bottom:20px;font-weight:bold;">
+  <button onclick="createEventSheet()" class="btn btn-primary">
     ➕ Create New Event Sheet
   </button>
+
+  <div class="manual-checkin">
+    <h3 style="margin-top:0;color:#555;">✍️ Manual Check-in</h3>
+    <div class="input-group autocomplete">
+      <label for="manualName">Select Name:</label>
+      <input type="text" id="manualName" placeholder="Start typing a name...">
+      <div id="autocomplete-list" class="autocomplete-items"></div>
+    </div>
+    <button onclick="manualCheckIn()" class="btn btn-success">
+      ✓ Mark Present
+    </button>
+  </div>
   
   <div id="reader"></div>
   <p id="status">Enter event name and scan QR code to begin</p>
@@ -86,6 +144,54 @@
     let eventSheet = "";
     let isProcessing = false;
     let html5QrcodeScanner;
+    let masterNames = [];
+
+    // Load master names list
+    async function loadMasterNames() {
+      try {
+        const url = `${SCRIPT_URL}?action=getMasterNames`;
+        const response = await fetch(url);
+        const data = await response.text();
+        if (data && !data.includes("Error")) {
+          masterNames = data.split(',').filter(n => n.trim());
+          console.log("Loaded master names:", masterNames);
+        }
+      } catch (err) {
+        console.error("Error loading master names:", err);
+      }
+    }
+
+    // Autocomplete functionality
+    const nameInput = document.getElementById("manualName");
+    const autocompleteList = document.getElementById("autocomplete-list");
+
+    nameInput.addEventListener("input", function() {
+      const val = this.value.trim();
+      autocompleteList.innerHTML = "";
+      
+      if (!val) return;
+      
+      const matches = masterNames.filter(name => 
+        name.toLowerCase().includes(val.toLowerCase())
+      );
+      
+      matches.forEach(name => {
+        const div = document.createElement("div");
+        div.textContent = name;
+        div.addEventListener("click", function() {
+          nameInput.value = name;
+          autocompleteList.innerHTML = "";
+        });
+        autocompleteList.appendChild(div);
+      });
+    });
+
+    // Close autocomplete when clicking outside
+    document.addEventListener("click", function(e) {
+      if (e.target !== nameInput) {
+        autocompleteList.innerHTML = "";
+      }
+    });
 
     document.getElementById("eventSheet").addEventListener("input", function() {
       eventSheet = this.value.trim();
@@ -100,9 +206,75 @@
       statusEl.className = type;
     }
 
+    // Vibration and sound feedback
+    function successFeedback() {
+      // Vibrate if supported
+      if (navigator.vibrate) {
+        navigator.vibrate(200);
+      }
+      // Play success sound
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.3;
+      
+      oscillator.start();
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    }
+
+    function errorFeedback() {
+      // Vibrate pattern for error
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+      // Play error sound
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 300;
+      oscillator.type = 'sine';
+      gainNode.gain.value = 0.3;
+      
+      oscillator.start();
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    }
+
+    async function manualCheckIn() {
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        updateStatus("⚠️ Please select a name!", "error");
+        errorFeedback();
+        return;
+      }
+
+      if (!masterNames.includes(name)) {
+        updateStatus("⚠️ Name not found in master list!", "error");
+        errorFeedback();
+        return;
+      }
+
+      await updateSheet(name);
+      nameInput.value = "";
+      autocompleteList.innerHTML = "";
+    }
+
     function createEventSheet() {
       if (!eventSheet) {
         updateStatus("⚠️ Please enter an Event Sheet Name first!", "error");
+        errorFeedback();
         return;
       }
 
@@ -121,21 +293,25 @@
           console.log("Create event response:", data);
           if (data.includes("successfully")) {
             updateStatus("✓ " + data, "success");
+            successFeedback();
           } else {
             updateStatus("⚠️ " + data, "error");
+            errorFeedback();
           }
           isProcessing = false;
         })
         .catch(error => {
           console.error("Error creating event:", error);
           updateStatus("❌ Failed to create event: " + error.message, "error");
+          errorFeedback();
           isProcessing = false;
         });
     }
 
-    function updateSheet(name) {
+    async function updateSheet(name) {
       if (!eventSheet) {
         updateStatus("⚠️ Please enter Event Sheet Name first!", "error");
+        errorFeedback();
         html5QrcodeScanner.clear();
         document.getElementById("reader").innerHTML = '<button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
         return;
@@ -152,25 +328,25 @@
 
       console.log("Sending request to:", url);
 
-      fetch(url)
-        .then(response => {
-          console.log("Response received:", response.status);
-          return response.text();
-        })
-        .then(data => {
-          console.log("Data received:", data);
-          if (data.includes("not found") || data.includes("Error") || data.includes("Missing")) {
-            updateStatus("❌ " + data, "error");
-          } else {
-            updateStatus("✓ " + data, "success");
-          }
-          isProcessing = false;
-        })
-        .catch(error => {
-          console.error("Fetch error:", error);
-          updateStatus("❌ Connection error: " + error.message, "error");
-          isProcessing = false;
-        });
+      try {
+        const response = await fetch(url);
+        const data = await response.text();
+        console.log("Data received:", data);
+        
+        if (data.includes("not found") || data.includes("Error") || data.includes("Missing")) {
+          updateStatus("❌ " + data, "error");
+          errorFeedback();
+        } else {
+          updateStatus("✓ " + data, "success");
+          successFeedback();
+        }
+        isProcessing = false;
+      } catch (error) {
+        console.error("Fetch error:", error);
+        updateStatus("❌ Connection error: " + error.message, "error");
+        errorFeedback();
+        isProcessing = false;
+      }
     }
 
     function onScanSuccess(decodedText) {
@@ -184,6 +360,7 @@
     function restartScanner() {
       if (!eventSheet) {
         updateStatus("⚠️ Please enter Event Sheet Name before scanning!", "error");
+        errorFeedback();
         return;
       }
       html5QrcodeScanner = new Html5QrcodeScanner(
@@ -209,7 +386,12 @@
     );
     
     html5QrcodeScanner.render(onScanSuccess, onScanError);
-    updateStatus("Camera access available. Enter event name and start scanning.", "info");
+    updateStatus("Loading...", "info");
+    
+    // Load master names on startup
+    loadMasterNames().then(() => {
+      updateStatus("Ready! Enter event name to begin.", "success");
+    });
   </script>
 </body>
 </html>
