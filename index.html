@@ -435,9 +435,11 @@
       html5QrcodeScanner = new Html5QrcodeScanner(
         "reader", 
         { 
-          fps: 10, 
-          qrbox: 250,
-          rememberLastUsedCamera: true
+          fps: 20,
+          qrbox: { width: 300, height: 300 },
+          rememberLastUsedCamera: true,
+          aspectRatio: 1.0,
+          disableFlip: false
         }
       );
       html5QrcodeScanner.render(onScanSuccess, onScanError);
@@ -448,9 +450,11 @@
     html5QrcodeScanner = new Html5QrcodeScanner(
       "reader", 
       { 
-        fps: 10, 
-        qrbox: 250,
-        rememberLastUsedCamera: true
+        fps: 20,
+        qrbox: { width: 300, height: 300 },
+        rememberLastUsedCamera: true,
+        aspectRatio: 1.0,
+        disableFlip: false
       }
     );
     
