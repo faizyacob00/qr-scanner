@@ -71,6 +71,10 @@
     <label for="eventSheet">Event Sheet Name:</label>
     <input type="text" id="eventSheet" placeholder="Enter Event Name (e.g., Workshop 2024)">
   </div>
+
+  <button onclick="createEventSheet()" style="width:100%;padding:12px;background:#2196F3;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;margin-bottom:20px;font-weight:bold;">
+    ➕ Create New Event Sheet
+  </button>
   
   <div id="reader"></div>
   <p id="status">Enter event name and scan QR code to begin</p>
@@ -94,6 +98,39 @@
       const statusEl = document.getElementById("status");
       statusEl.innerText = message;
       statusEl.className = type;
+    }
+
+    function createEventSheet() {
+      if (!eventSheet) {
+        updateStatus("⚠️ Please enter an Event Sheet Name first!", "error");
+        return;
+      }
+
+      if (isProcessing) {
+        return;
+      }
+
+      isProcessing = true;
+      updateStatus("Creating event sheet: " + eventSheet + "...", "info");
+
+      const url = `${SCRIPT_URL}?action=createEvent&eventName=${encodeURIComponent(eventSheet)}`;
+
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          console.log("Create event response:", data);
+          if (data.includes("successfully")) {
+            updateStatus("✓ " + data, "success");
+          } else {
+            updateStatus("⚠️ " + data, "error");
+          }
+          isProcessing = false;
+        })
+        .catch(error => {
+          console.error("Error creating event:", error);
+          updateStatus("❌ Failed to create event: " + error.message, "error");
+          isProcessing = false;
+        });
     }
 
     function updateSheet(name) {
