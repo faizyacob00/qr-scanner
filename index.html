@@ -45,6 +45,7 @@
       border-radius: 8px;
       overflow: hidden;
       background: white;
+      position: relative;
     }
     #status {
       padding: 15px;
@@ -120,7 +121,7 @@
       opacity: 0.8;
     }
     .scan-overlay {
-      position: fixed;
+      position: absolute;
       top: 0;
       left: 0;
       width: 100%;
@@ -146,8 +147,6 @@
   </style>
 </head>
 <body>
-  <div id="scanOverlay" class="scan-overlay"></div>
-  
   <h2>📱 Attendance QR Scanner</h2>
   
   <div class="input-group">
@@ -161,7 +160,9 @@
 
   <p id="status">Enter event name and scan QR code to begin</p>
 
-  <div id="reader"></div>
+  <div id="reader">
+    <div id="scanOverlay" class="scan-overlay"></div>
+  </div>
 
   <div class="manual-checkin">
     <h3 style="margin-top:0;color:#555;">✍️ Manual Check-in</h3>
@@ -257,7 +258,7 @@
       setTimeout(() => {
         overlay.className = "scan-overlay";
         overlay.textContent = "";
-      }, 1000);
+      }, 400);
     }
 
     function successFeedback() {
@@ -323,7 +324,7 @@
         return;
       }
 
-      await updateSheet(name);
+      updateSheet(name);
       nameInput.value = "";
       autocompleteList.innerHTML = "";
     }
@@ -370,40 +371,28 @@
         updateStatus("⚠️ Please enter Event Sheet Name first!", "error");
         errorFeedback();
         html5QrcodeScanner.clear();
-        document.getElementById("reader").innerHTML = '<button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
+        document.getElementById("reader").innerHTML = '<div id="scanOverlay" class="scan-overlay"></div><button onclick="restartScanner()" style="width:100%;padding:15px;background:#4CAF50;color:white;border:none;border-radius:4px;font-size:16px;cursor:pointer;">Restart Scanner</button>';
         return;
       }
-
-      if (isProcessing) {
-        return;
-      }
-
-      isProcessing = true;
-      updateStatus("Processing: " + name, "info");
 
       const url = `${SCRIPT_URL}?event=${encodeURIComponent(eventSheet)}&name=${encodeURIComponent(name)}`;
 
-      console.log("Sending request to:", url);
-
-      try {
-        const response = await fetch(url);
-        const data = await response.text();
-        console.log("Data received:", data);
-        
-        if (data.includes("not found") || data.includes("Error") || data.includes("Missing")) {
-          updateStatus("❌ " + data, "error");
+      // Fire request immediately without waiting
+      fetch(url)
+        .then(response => response.text())
+        .then(data => {
+          if (data.includes("not found") || data.includes("Error") || data.includes("Missing")) {
+            updateStatus("❌ " + data, "error");
+            errorFeedback();
+          } else {
+            updateStatus("✓ " + data, "success");
+            successFeedback();
+          }
+        })
+        .catch(error => {
+          updateStatus("❌ Connection error: " + error.message, "error");
           errorFeedback();
-        } else {
-          updateStatus("✓ " + data, "success");
-          successFeedback();
-        }
-        isProcessing = false;
-      } catch (error) {
-        console.error("Fetch error:", error);
-        updateStatus("❌ Connection error: " + error.message, "error");
-        errorFeedback();
-        isProcessing = false;
-      }
+        });
     }
 
     function onScanSuccess(decodedText) {
@@ -420,6 +409,9 @@
         errorFeedback();
         return;
       }
+      const readerDiv = document.getElementById("reader");
+      readerDiv.innerHTML = '<div id="scanOverlay" class="scan-overlay"></div>';
+      
       html5QrcodeScanner = new Html5QrcodeScanner(
         "reader", 
         { 
