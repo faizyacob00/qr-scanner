@@ -108,6 +108,17 @@
     .btn-success { background: #4CAF50; }
     .btn-primary:active { background: #1976D2; }
     .btn-success:active { background: #388E3C; }
+    .footer-logo {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px solid #ddd;
+    }
+    .footer-logo img {
+      max-width: 200px;
+      height: auto;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
@@ -122,6 +133,8 @@
     ➕ Create New Event Sheet
   </button>
 
+  <p id="status">Enter event name and scan QR code to begin</p>
+
   <div class="manual-checkin">
     <h3 style="margin-top:0;color:#555;">✍️ Manual Check-in</h3>
     <div class="input-group autocomplete">
@@ -135,7 +148,6 @@
   </div>
   
   <div id="reader"></div>
-  <p id="status">Enter event name and scan QR code to begin</p>
 
   <script>
     // Your Google Apps Script Web App URL
