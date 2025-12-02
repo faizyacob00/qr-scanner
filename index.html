@@ -15,6 +15,17 @@
     h2 {
       color: #333;
       text-align: center;
+      margin-bottom: 20px;
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .header-row h2 {
+      margin: 0;
+      text-align: left;
     }
     .input-group {
       margin-bottom: 20px;
@@ -150,7 +161,15 @@
   </style>
 </head>
 <body>
-  <h2>📱 Attendance QR Scanner</h2>
+  <div class="header-row">
+    <h2>📱 Attendance QR Scanner</h2>
+    <div class="sheet-link-box">
+      <a href="https://docs.google.com/spreadsheets/d/1KmSg4yP-D915e7J6QEhiJHWtCOZMcsSYzMhNQ-GeSpU/edit" target="_blank" class="sheet-link">
+        <span>📊</span>
+        <span>View Sheet</span>
+      </a>
+    </div>
+  </div>
   
   <div class="input-group">
     <label for="eventSheet">Event Sheet Name:</label>
